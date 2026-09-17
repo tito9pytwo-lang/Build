@@ -1,0 +1,49 @@
+name: Build & Sign Android APK
+
+on:
+  workflow_dispatch: # تشغيل يدوياً وقتما تشاء
+  push:
+    branches:
+      - main # تشغيل تلقائياً عند رفع أي تحديث جديد
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. جلب أحدث نسخة من الكود عند كل تحديث
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. إعداد بيئة Java JDK 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      # 3. إعطاء صلاحيات التشغيل
+      - name: Grant Execute Permission for Gradle
+        run: chmod +x gradlew
+
+      # 4. بناء ملف APK للتحديث الجديد
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      # 5. توقيع الـ APK الناتج
+      - name: Sign APK with Auto-Generated Key
+        uses: rpx0/autosign-action@v1
+        with:
+          releaseDir: 'app/build/outputs/apk/release'
+          keyAlias: 'my-key-alias'
+          keyPassword: 'MyPassword123'
+          storePassword: 'MyPassword123'
+
+      # 6. رفع الـ APK وتسميته باسم التحديث والرقم لتمييزه
+      - name: Upload Signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Signed-APK-Build-${{ github.run_number }}
+          path: app/build/outputs/apk/release/*-signed.apk
+          
